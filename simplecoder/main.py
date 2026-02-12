@@ -49,7 +49,7 @@ def main():
 )
 @click.option(
     "--rag-embedder",
-    default="gemini/gemini-embedding-001",
+    default="all-MiniLM-L6-v2",
     help="Embedding model for RAG"
 )
 @click.option(

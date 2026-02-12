@@ -111,7 +111,7 @@ def write_file(filepath: str, content: str) -> str:
         return f"Error writing file: {str(e)}"
 
 
-def search_files(pattern: str, directory: str) -> str:
+def search_files(pattern: str, directory: str = ".") -> str:
     try:
         path = Path(directory).resolve()
         

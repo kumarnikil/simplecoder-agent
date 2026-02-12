@@ -72,7 +72,7 @@ class Agent:
         verbose: bool = False,
         use_planning: bool = False,
         use_rag: bool = False,
-        rag_embedder: str = "text-embedding-004",
+        rag_embedder: str = "all-MiniLM-L6-v2",
         rag_index_pattern: str = "**/*.py"
     ):
         """
@@ -96,8 +96,18 @@ class Agent:
         self.use_rag = use_rag
         self.context_manager = ContextManager(max_tokens=128000, keep_last_n=10, verbose=self.verbose)
 
-        # conversation history between LLM
+        # conversation history between LLM calls
         self.messages: List[Dict[str, str]] = []
+
+        if self.use_rag:
+            from simplecoder.rag import CodeRAG
+            from simplecoder.tools import set_rag_instance
+            
+            console.print("[cyan]📚 Initializing RAG...[/cyan]")
+            self.rag = CodeRAG(embedder=rag_embedder, index_pattern=rag_index_pattern)
+            self.rag.index_codebase(".")
+            set_rag_instance(self.rag)
+            console.print("[green]✓ RAG ready[/green]")
         
         # check for API key
         if not os.getenv("GEMINI_API_KEY"):
@@ -251,6 +261,13 @@ class Agent:
 
 
         try: 
+
+            # # DEBUG: Print message structurea
+            # if self.verbose:
+            #     console.print("\n[yellow]DEBUG: Messages being sent:[/yellow]")
+            #     for i, msg in enumerate(self.messages):
+            #         console.print(f"  {i}. role={msg.get('role')}, has_content={bool(msg.get('content'))}, has_tool_calls={bool(msg.get('tool_calls'))}")
+
             response = completion(
                 model=self.model,
                 messages=self.messages,

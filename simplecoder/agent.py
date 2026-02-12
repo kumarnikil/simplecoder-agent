@@ -40,7 +40,15 @@ class Agent:
                     - write_file: Create or overwrite a file
                     - edit_file: Make targeted edits to existing files
                     - search_files: Find files matching a pattern
+                    - search_web: Search the internet for current information
+                    - search_codebase: SEMANTIC search - use this to find code by PURPOSE not filename (e.g., "find authentication code", "locate database functions")
 
+                    
+                    IMPORTANT TOOL USAGE:
+                    - Use search_codebase when you need to find code by what it DOES
+                    - Use search_files when you need to find files by NAME or pattern
+                    - Use read_file when you know the exact file to read
+                    
                     How to use these tools:
                     1. When you need to do something (like check what files exist, or create a file), use a tool
                     2. After using a tool, you'll see the result and can decide what to do next

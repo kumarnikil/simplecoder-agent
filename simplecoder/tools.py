@@ -6,8 +6,11 @@ Details: Strict functions exposed to Agent to interact with internal files.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
 from simplecoder.permissions import PermissionManager
+from simplecoder.rag import CodeRAG
+
 from tavily import TavilyClient
 
 """
@@ -20,6 +23,17 @@ def set_permission_manager(pm : PermissionManager) -> None:
     global _permission_manager
     _permission_manager = pm
 
+"""
+GLOBAL RAG Instance
+
+"""
+
+_rag_instance: Optional[CodeRAG] = None
+
+def set_rag_instance(rag: CodeRAG) -> None:
+    """Set the global RAG instance."""
+    global _rag_instance
+    _rag_instance = rag
 
 """
 TOOL FUNCTION LOGIC
@@ -146,6 +160,35 @@ def edit_file(filepath: str, old_text: str, new_text: str) -> str:
         return f"Error editing file: {str(e)}"
 
 
+def search_codebase(query: str, max_results: int = 5) -> str:
+    """
+    Search the codebase semantically using RAG.
+    Finds functions/classes by what they DO, not just filename.
+    """
+    if not _rag_instance:
+        return "Error: RAG not initialized. Use --use-rag flag to enable codebase search."
+    
+    try:
+        results = _rag_instance.search(query, top_k=max_results)
+        
+        if not results:
+            return f"No code found matching: {query}"
+        
+        # Format results
+        formatted = [f"Semantic search results for '{query}':\n"]
+        for i, result in enumerate(results, 1):
+            formatted.append(
+                f"\n{i}. {result['type'].upper()}: {result['name']}\n"
+                f"   File: {result['file']}:{result['line']}\n"
+                f"   Code preview:\n{result['code'][:300]}...\n"
+            )
+        
+        return "\n".join(formatted)
+    
+    except Exception as e:
+        return f"Error searching codebase: {str(e)}"
+
+
 def search_web(query: str, max_results: int = 5) -> str:
     """
     Search the web using Tavily for up-to-date information.
@@ -270,6 +313,24 @@ TOOLS = [
         }
     },
     {
+        "name": "search_codebase",
+        "description": "Semantically search the codebase for functions, classes, or code by PURPOSE. Use this to find code by what it DOES (e.g., 'authentication logic', 'database queries'), not by filename.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "What you're looking for (e.g., 'permission checking functions', 'file writing code')"
+                },
+                "max_results": {
+                    "type": "integer",
+                    "description": "Number of results to return (default: 5)"
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
         "name": "search_web",
         "description": "Search the web for current information, documentation, tutorials, or best practices. Use this when you need up-to-date information not in your training data.",
         "parameters": {
@@ -301,6 +362,7 @@ TOOL_FUNCTIONS = {
     "write_file": write_file,
     "search_files": search_files,
     "edit_file": edit_file,
+    "search_codebase": search_codebase,
     "search_web": search_web
 }
 
@@ -317,7 +379,8 @@ def execute_tool(tool_name: str, tool_args: Dict[str, Any]) -> str:
     except Exception as e:
         return f"Error executing tool '{tool_name}': {str(e)}"
 
-# testing 
+
+# compilation testing 
 # if __name__ == "__main__":
 #     print(execute_tool("list_files", {"dir": "."}))
 #     print("\n")

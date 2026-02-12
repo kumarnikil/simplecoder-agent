@@ -48,16 +48,6 @@ class TaskPlanner:
         console.print(f"[cyan]📋 Creating plan for:[/cyan] {task}")
         console.print("[dim]⏳ Asking LLM to break down task...[/dim]")
         
-        # prompt = f"""Break down this task into 3-7 clear, actionable subtasks:
-            
-        #             Task: {task}
-            
-        #             Return ONLY a JSON array of subtasks. Each subtask should be a brief description.
-        #             Example format: ["subtask 1", "subtask 2", "subtask 3"]
-        #             JSON array:
-                    
-        #          """
-        
         prompt = f"""Break down this task into 3-7 clear, actionable subtasks.
 
                     Task: {task}

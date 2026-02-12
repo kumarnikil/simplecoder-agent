@@ -71,58 +71,35 @@ simplecoder --interactive
 # Planning + web search for current best practices
 simplecoder --use-planning "search for Flask routing best practices, then create a demo app using those patterns"
 ```
+---
 
-## Module Architecture
+## Implementation Approach
 
-### agent.py - ReAct Loop Engine
+### agent.py - Main Agent Logic
 
-Implements the core Reasoning-Acting-Observing cycle. The agent iteratively:
-1. Reasons about what to do next (via LLM)
-2. Acts by calling tools or providing answers
-3. Observes tool results and decides next steps
+Implements a ReAct (Reasoning + Acting) loop where the agent iteratively reasons about what to do next, executes tools, observes results, and decides on next steps. Uses LiteLLM for unified LLM API access across providers. The agent maintains conversation history and calls tools through a standardized JSON schema interface. Error handling includes retry logic for rate limits and clear user feedback. The loop continues until the agent provides a final answer or reaches max iterations.
 
-Uses LiteLLM for unified LLM API access, supporting multiple providers. Includes error handling for rate limits and API failures.
+### tools.py - Tool Functions and Schemas
 
-### tools.py - Tool System
+Provides 7 tools for file operations and information retrieval: list_files, read_file, write_file, edit_file, search_files (filesystem operations), search_web (Tavily API), and search_codebase (RAG). Each tool has three components: (1) implementation function with error handling, (2) JSON schema defining parameters for the LLM, and (3) permission checks for write operations. The execute_tool dispatcher validates tool names and routes LLM requests to appropriate functions with type-safe argument passing.
 
-Provides 7 tools for file operations and information retrieval:
-- **File ops**: list_files, read_file, write_file, edit_file, search_files
-- **Search**: search_web (Tavily), search_codebase (RAG)
+### permissions.py - Permission Management
 
-Each tool has: (1) implementation function, (2) JSON schema for LLM, (3) permission checks. The execute_tool dispatcher routes LLM requests to appropriate functions.
+Implements a safety layer that asks users before file modifications. Supports two permission levels: operation-level (ask each time) and session-level (remember choice for current session). The request_permission method checks session memory first, then prompts if needed. This prevents unwanted file changes while enabling efficient workflows through session persistence. Auto-approve mode is available for non-interactive use cases.
 
-### permissions.py - Safety Layer
+### planner.py - Task Planning and Decomposition
 
-Implements permission system to prevent unwanted file modifications. Supports:
-- Operation-level permissions (ask each time)
-- Session-level permissions (remember for session)
-- Auto-approve mode for non-interactive use
-
-Designed to give users control while enabling efficient workflows.
-
-### planner.py - Task Decomposition
-
-Uses LLM to break complex tasks into 3-7 actionable subtasks. Tracks completion status and executes subtasks sequentially. 
-
-Improved planning prompt ensures subtasks are independently executable and avoid unnecessary create-then-edit patterns. Combines related actions into single steps (e.g., "create file.py with content X" not "create file.py" then "add content").
+Uses the LLM to break complex tasks into 3-7 actionable subtasks before execution. The create_plan method sends a structured prompt requesting JSON output of subtasks. Key improvement: the prompt explicitly instructs combining related actions (e.g., "create file.py with content X" not "create file.py" then "add content"), preventing unnecessary create-then-edit patterns. Tracks completion status and executes subtasks sequentially through the main ReAct loop.
 
 ### rag.py - Semantic Code Search
 
-Enables fast semantic search over large codebases using:
-1. **AST-based chunking**: Parses code by functions/classes (not arbitrary chunks)
-2. **Embeddings**: Creates vector representations using sentence-transformers
-3. **ChromaDB**: Vector database for similarity search
+Enables fast semantic search over large codebases using three components: (1) AST-based chunking that parses Python files by functions and classes rather than arbitrary text chunks, (2) sentence-transformer embeddings that create vector representations of code, and (3) ChromaDB for similarity search. This allows finding code by purpose ("authentication logic") rather than just filename matching, making it far more useful than grep-style text search for understanding unfamiliar codebases.
 
-This allows finding relevant code by *purpose* rather than just filename matching.
+### context.py - Context Management
 
-### context.py - Token Management
+Monitors conversation token usage and compacts history when approaching LLM context limits (128k tokens for Gemini). Uses a simple strategy: keep system prompt and last N messages (for continuity), discard middle messages when over 80% threshold. Token estimation uses ~4 characters per token heuristic. This prevents API errors from exceeding context windows and reduces costs by keeping conversations within reasonable bounds during long iterative sessions.
 
-Monitors conversation token usage and compacts history when approaching LLM limits (128k tokens). Strategy:
-- Keep system prompt (instructions)
-- Keep last N messages (continuity)
-- Discard middle messages when over 80% threshold
-
-Simple estimation: ~4 characters per token. Prevents API errors and reduces costs.
+---
 
 ## Demo Project
 

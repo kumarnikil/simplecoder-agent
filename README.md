@@ -103,7 +103,7 @@ Monitors conversation token usage and compacts history when approaching LLM cont
 
 ## Demo Project
 
-[Include your demo description here after you build it]
+[\[Demo\]](https://youtu.be/pcr_TaaWNek)
 
 ## Requirements
 
